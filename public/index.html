@@ -677,7 +677,7 @@
   <div class="input-bar">
     <div class="input-actions">
       <button class="icon-btn" onclick="fileInput.click()" title="Send file">📎</button>
-      <button class="icon-btn" id="mic-btn" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()" title="Hold to record">🎙️</button>
+      <button class="icon-btn" id="mic-btn" onpointerdown="startRecording(event)" onpointerup="stopRecording(event)" onpointercancel="stopRecording(event)" onpointerleave="stopRecording(event)" title="Hold to record">🎙️</button>
     </div>
     <textarea class="input-text" id="msg-input" placeholder="Type a message..." rows="1"></textarea>
     <button class="send-btn" id="send-btn" onclick="sendText()">↑</button>
@@ -1378,20 +1378,25 @@ function completeFileReceive(fileId, blob, name, mimeType) {
   scrollToBottom();
 }
 
+let currentStream = null;
+
 // ========== AUDIO RECORDING ==========
-async function startRecording() {
+async function startRecording(e) {
+  if (e) e.preventDefault(); // Prevent standard mouse events from firing after touch
   if (isRecording) return;
+  isRecording = true; // Set synchronously to prevent double-firing race condition
+  document.getElementById('mic-btn').classList.add('recording');
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+    currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(currentStream, { mimeType: 'audio/webm' });
     audioChunks = [];
     
     mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
     mediaRecorder.onstop = async () => {
-      stream.getTracks().forEach(t => t.stop());
       const blob = new Blob(audioChunks, { type: 'audio/webm' });
       
-      if (dataChannel && dataChannel.readyState === 'open') {
+      if (dataChannel && dataChannel.readyState === 'open' && audioChunks.length > 0) {
         const buffer = await blob.arrayBuffer();
         if (useEncryption && cryptoKey !== 'plaintext') {
           const encrypted = await encrypt(new Uint8Array(buffer));
@@ -1410,16 +1415,26 @@ async function startRecording() {
     };
 
     mediaRecorder.start();
-    isRecording = true;
-    document.getElementById('mic-btn').classList.add('recording');
   } catch (err) {
+    isRecording = false;
+    document.getElementById('mic-btn').classList.remove('recording');
     showToast('Microphone access denied', true);
   }
 }
 
-function stopRecording() {
-  if (!isRecording || !mediaRecorder) return;
-  mediaRecorder.stop();
+function stopRecording(e) {
+  if (e) e.preventDefault();
+  if (!isRecording) return;
+
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+  }
+  
+  if (currentStream) {
+    currentStream.getTracks().forEach(t => t.stop());
+    currentStream = null;
+  }
+
   isRecording = false;
   document.getElementById('mic-btn').classList.remove('recording');
 }
