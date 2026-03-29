@@ -677,7 +677,7 @@
   <div class="input-bar">
     <div class="input-actions">
       <button class="icon-btn" onclick="fileInput.click()" title="Send file">📎</button>
-      <button class="icon-btn" id="mic-btn" onpointerdown="startRecording(event)" onpointerup="stopRecording(event)" onpointercancel="stopRecording(event)" onpointerleave="stopRecording(event)" title="Hold to record">🎙️</button>
+      <button class="icon-btn" id="mic-btn" oncontextmenu="return false;" style="touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;" onpointerdown="startRecording(event)" onpointerup="stopRecording(event)" onpointercancel="stopRecording(event)" onpointerleave="stopRecording(event)" title="Hold to record">🎙️</button>
     </div>
     <textarea class="input-text" id="msg-input" placeholder="Type a message..." rows="1"></textarea>
     <button class="send-btn" id="send-btn" onclick="sendText()">↑</button>
