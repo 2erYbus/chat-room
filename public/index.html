@@ -1389,6 +1389,14 @@ async function startRecording(e) {
 
   try {
     currentStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    
+    // If the user released the button before getUserMedia resolved or while permission dialog was open
+    if (!isRecording) {
+      currentStream.getTracks().forEach(t => t.stop());
+      currentStream = null;
+      return;
+    }
+
     mediaRecorder = new MediaRecorder(currentStream, { mimeType: 'audio/webm' });
     audioChunks = [];
     
